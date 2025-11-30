@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Darja</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700;800&family=Rozha+One&display=swap" rel="stylesheet">
+    
+    <!-- React & Babel for Single File Execution -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      body {
+        font-family: 'Space Grotesk', sans-serif;
+        background: #ffffff;
+        color: #0f172a; 
+        overflow-x: hidden;
+        -webkit-tap-highlight-color: transparent;
+        transition: color 2s ease-in-out; 
+      }
+      
+      body.cinematic-mode {
+        /* Content color changes, background is covered by ink */
+        color: #f8fafc;
+      }
+      
+      .font-darja {
+        font-family: 'Rozha One', serif;
+      }
+      
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar { width: 6px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+
+      /* Hide Input Spinners */
+      input::-webkit-outer-spin-button,
+      input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      input[type=number] {
+        -moz-appearance: textfield;
+      }
+
+      .glow-text { text-shadow: 0 0 20px rgba(251, 191, 36, 0.6); }
+      
+      /* New Glow Effects */
+      .glow-title { text-shadow: 0 0 25px rgba(255, 255, 255, 0.3); }
+      .glow-input { box-shadow: 0 0 30px rgba(255, 255, 255, 0.08); }
+      .glow-globe { filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.3)); }
+      .glow-indigo { text-shadow: 0 0 20px rgba(129, 140, 248, 0.6); }
+
+      /* Smooth fade in for results */
+      @keyframes fadeInDelay {
+        0% { opacity: 0; transform: translateY(40px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+      
+      .animate-delayed-entry {
+        animation: fadeInDelay 1.5s ease-out forwards;
+      }
+
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 20px 40px -5px rgba(255, 153, 51, 0.05); /* Warmer, less black shadow */
+        transition: background 1.5s ease, border 1.5s ease, box-shadow 1.5s ease, opacity 0.5s ease;
+      }
+
+      /* Dark mode styles for glass panel */
+      .cinematic-mode .glass-panel {
+        background: rgba(20, 20, 20, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+      }
+      
+      .cinematic-mode .input-container {
+        background: #1a1a1a;
+        border-color: #333;
+        color: white;
+      }
+      
+      .cinematic-mode .input-text {
+        color: white;
+      }
+
+      /* Ink Splash Animation */
+      .ink-blob {
+        position: fixed;
+        background: #000;
+        border-radius: 50%;
+        transform: scale(0);
+        z-index: -1; /* Behind content */
+        pointer-events: none;
+      }
+      
+      .animate-ink {
+        animation: inkSpread 5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+      }
+
+      @keyframes inkSpread {
+        0% { transform: scale(0); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+    </style>
+  <link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-presets="env,react">
+      const { useState, useEffect, useRef } = React;
+
+      // --- UTILS & CONSTANTS ---
+      
+      const INDIAN_POPULATION_ESTIMATE = 1400000000;
+      const WORKFORCE_ESTIMATE = 586000000; // Approx 58.6 Crore
+      
+      // Derived median from the new dataset:
+      // 40.6% at ~4347 and 52.48% at ~11856.
+      // Interpolating 50% gives approx 10,290/month => 1,23,500/year.
+      const AVG_ANNUAL_INCOME = 123500; 
+
+      // Expanded Comparison Data - Just Names and Population
+      const PLACE_DATA = [
+        { label: "Uttar Pradesh", val: 241000000 },
+        { label: "Bihar", val: 130000000 },
+        { label: "Maharashtra", val: 126000000 },
+        { label: "West Bengal", val: 99000000 },
+        { label: "Madhya Pradesh", val: 85000000 },
+        { label: "Rajasthan", val: 81000000 },
+        { label: "Tamil Nadu", val: 77000000 },
+        { label: "Karnataka", val: 69000000 },
+        { label: "Gujarat", val: 70000000 },
+        { label: "Andhra Pradesh", val: 53000000 },
+        { label: "Odisha", val: 46000000 },
+        { label: "Telangana", val: 38000000 },
+        { label: "Kerala", val: 36000000 },
+        { label: "Jharkhand", val: 39000000 },
+        { label: "Assam", val: 35000000 },
+        { label: "Punjab", val: 30000000 },
+        { label: "Chhattisgarh", val: 30000000 },
+        { label: "Haryana", val: 29000000 },
+        { label: "Delhi NCR", val: 32000000 },
+        { label: "Jammu & Kashmir", val: 14000000 },
+        { label: "Uttarakhand", val: 11000000 },
+        { label: "Himachal Pradesh", val: 7500000 },
+        { label: "Tripura", val: 4000000 },
+        { label: "Meghalaya", val: 3300000 },
+        { label: "Manipur", val: 3100000 },
+        { label: "Nagaland", val: 2200000 },
+        { label: "Goa", val: 1570000 },
+        { label: "Arunachal Pradesh", val: 1500000 },
+        { label: "Mizoram", val: 1200000 },
+        { label: "Chandigarh", val: 1100000 },
+        { label: "Sikkim", val: 690000 },
+        { label: "Ladakh", val: 274000 },
+        { label: "Lakshadweep", val: 64000 },
+        { label: "Mawlynnong", val: 9000 },
+        { label: "Malana", val: 4700 },
+      ].sort((a, b) => b.val - a.val);
+
+      // New Precise Percentile Brackets (Monthly Income)
+      const PERCENTILE_BRACKETS = [
+        { limit: 3000, p: 34 },
+        { limit: 4347, p: 40.6 },
+        { limit: 11856, p: 52.48 },
+        { limit: 14403, p: 62.38 },
+        { limit: 16969, p: 69.88 },
+        { limit: 20052, p: 84.88 },
+        { limit: 23986, p: 89.2 },
+        { limit: 29228, p: 93.04 },
+        { limit: 38105, p: 94.56 },
+        { limit: 66141, p: 95.44 },
+        { limit: 400000, p: 99 } // Top 1% threshold
+      ];
+
+      // Format Numbers to Indian System (Lakh/Crore)
+      const formatIndianNumber = (num) => {
+        if (num >= 10000000) {
+          return (num / 10000000).toFixed(2) + " Crore";
+        }
+        if (num >= 100000) {
+          return (num / 100000).toFixed(2) + " Lakh";
+        }
+        return new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(num);
+      };
+
+      // Format Percentage for Top X%
+      const formatPercent = (num) => {
+        if (num < 0.0001) return "< 0.0001";
+        if (num < 0.01) return num.toFixed(4);
+        if (num < 1) return num.toFixed(3);
+        if (num < 10) return num.toFixed(2); 
+        return Math.floor(num).toString();
+      };
+
+      const calculateStats = (annualIncome) => {
+        if (annualIncome === 0) {
+           return { isZero: true, percentile: 0, populationBelow: 0, combinedString: "", avgMultiplier: 0 };
+        }
+
+        const monthlyIncome = annualIncome / 12;
+        let percentile = 0;
+
+        // --- Data-Driven Interpolation Logic ---
+        
+        // Base unemployment rate: 5.6% of population is unemployed (earns 0).
+        // So any income > 0 starts at 5.6th percentile.
+        const BASE_PERCENTILE = 5.6;
+
+        if (monthlyIncome <= 3000) {
+           // Linear interpolation from 5.6% to 34%
+           const bracketRange = 34 - BASE_PERCENTILE;
+           const progress = monthlyIncome / 3000;
+           percentile = BASE_PERCENTILE + (progress * bracketRange);
+        } else if (monthlyIncome >= 400000) {
+           // Top 1% (Income > 4 Lakh/month)
+           // Using log scale for the ultra-wealthy tail
+           // Starting at 99%, approaching 99.9999%
+           const extra = Math.log10(monthlyIncome / 400000);
+           percentile = 99 + (0.9999 * (1 - (1 / (1 + extra * 1.5))));
+           percentile = Math.min(percentile, 99.9999);
+        } else {
+           // Interpolate between brackets
+           for (let i = 0; i < PERCENTILE_BRACKETS.length - 1; i++) {
+              const lower = PERCENTILE_BRACKETS[i];
+              const upper = PERCENTILE_BRACKETS[i+1];
+              
+              if (monthlyIncome >= lower.limit && monthlyIncome <= upper.limit) {
+                 const incomeRange = upper.limit - lower.limit;
+                 const percentileRange = upper.p - lower.p;
+                 const progress = (monthlyIncome - lower.limit) / incomeRange;
+                 percentile = lower.p + (progress * percentileRange);
+                 break;
+              }
+           }
+           // Handle case between 66,141 and 400,000 (95.44% to 99%)
+           if (monthlyIncome > 66141 && monthlyIncome < 400000) {
+              const lower = { limit: 66141, p: 95.44 };
+              const upper = { limit: 400000, p: 99 };
+              const incomeRange = upper.limit - lower.limit;
+              const percentileRange = upper.p - lower.p;
+              const progress = (monthlyIncome - lower.limit) / incomeRange;
+              percentile = lower.p + (progress * percentileRange);
+           }
+        }
+        
+        const populationBelow = Math.floor(INDIAN_POPULATION_ESTIMATE * (percentile / 100));
+        
+        // Dynamic Greedy Algorithm up to 5 items, Display logic handles truncated 3 items
+        let remainingPop = populationBelow;
+        let combinedNames = [];
+        let usedPlaces = new Set();
+        
+        // We calculate more items to see deep coverage, but we limit logic loop to prevent infinite issues
+        let maxLoop = 8; 
+
+        if (remainingPop < PLACE_DATA[PLACE_DATA.length - 1].val) {
+             // Smaller than smallest place
+             const smallest = PLACE_DATA[PLACE_DATA.length - 1];
+             combinedNames.push(`${(remainingPop / smallest.val).toFixed(2)}x ${smallest.label}`);
+        } else {
+             // Combine places
+             for (const place of PLACE_DATA) {
+                 if (combinedNames.length >= maxLoop) break;
+                 
+                 if (place.val <= remainingPop && !usedPlaces.has(place.label)) {
+                     combinedNames.push(place.label);
+                     remainingPop -= place.val;
+                     usedPlaces.add(place.label);
+                 }
+             }
+             
+             // If we still have meaningful population left, add it to count
+             if (remainingPop > 1000000) { 
+                 // Just a heuristic to ensure we don't count trivial leftover
+             }
+        }
+
+        // Format for display: Max 3 names + Count
+        let displayString = "";
+        if (combinedNames.length > 3) {
+            const firstThree = combinedNames.slice(0, 3);
+            const othersCount = combinedNames.length - 3;
+            // If we had more names in our logic but cut them off, we add them to 'others'. 
+            // In a real scenario we might calculate 'others' more precisely by dividing remainingPop by avg state size, 
+            // but for this visual we use the names we found.
+            displayString = firstThree.join(" + ") + ` + ${othersCount} other states`;
+        } else {
+            displayString = combinedNames.join(" + ");
+        }
+
+        return {
+          percentile,
+          populationBelow,
+          combinedString: displayString,
+          avgMultiplier: annualIncome / AVG_ANNUAL_INCOME,
+          isZero: false
+        };
+      };
+
+      // --- COMPONENTS ---
+
+      // 1. Ink Reveal Component
+      const InkReveal = ({ trigger }) => {
+        if (!trigger) return null;
+        return (
+          <>
+            {/* 1. Fast, sharp center splashes - slowed down */}
+            <div className="ink-blob top-[50%] left-[50%] w-[150vmax] h-[150vmax] -ml-[75vmax] -mt-[75vmax] animate-ink" 
+                 style={{animationDelay: '0ms', animationDuration: '5.5s'}}></div>
+            
+            {/* 2. Rapid small blobs for chaos - slowed down */}
+            <div className="ink-blob top-[20%] left-[30%] w-[80vmax] h-[80vmax] -ml-[40vmax] -mt-[40vmax] animate-ink" 
+                 style={{animationDelay: '150ms', animationDuration: '4.8s'}}></div>
+            <div className="ink-blob bottom-[20%] right-[30%] w-[90vmax] h-[90vmax] -ml-[45vmax] -mt-[45vmax] animate-ink" 
+                 style={{animationDelay: '200ms', animationDuration: '5s'}}></div>
+            <div className="ink-blob top-[80%] left-[10%] w-[70vmax] h-[70vmax] -ml-[35vmax] -mt-[35vmax] animate-ink" 
+                 style={{animationDelay: '250ms', animationDuration: '4.5s'}}></div>
+
+            {/* 3. Medium blobs covering edges - slowed down */}
+            <div className="ink-blob top-[0%] right-[0%] w-[120vmax] h-[120vmax] -ml-[60vmax] -mt-[60vmax] animate-ink" 
+                 style={{animationDelay: '500ms', animationDuration: '5.2s'}}></div>
+            <div className="ink-blob bottom-[0%] left-[0%] w-[130vmax] h-[130vmax] -ml-[65vmax] -mt-[65vmax] animate-ink" 
+                 style={{animationDelay: '600ms', animationDuration: '5.8s'}}></div>
+            
+            {/* 4. Large slow fillers - slowed down */}
+            <div className="ink-blob top-[40%] right-[80%] w-[110vmax] h-[110vmax] -ml-[55vmax] -mt-[55vmax] animate-ink" 
+                 style={{animationDelay: '800ms', animationDuration: '6s'}}></div>
+            <div className="ink-blob top-[10%] left-[60%] w-[140vmax] h-[140vmax] -ml-[70vmax] -mt-[70vmax] animate-ink" 
+                 style={{animationDelay: '900ms', animationDuration: '6.2s'}}></div>
+
+            {/* 5. Massive engulfing waves - slowed down significantly */}
+            <div className="ink-blob top-[50%] left-[50%] w-[250vmax] h-[250vmax] -ml-[125vmax] -mt-[125vmax] animate-ink" 
+                 style={{animationDelay: '400ms', animationDuration: '6.5s', opacity: 0.98}}></div>
+            <div className="ink-blob top-[30%] left-[30%] w-[200vmax] h-[200vmax] -ml-[100vmax] -mt-[100vmax] animate-ink" 
+                 style={{animationDelay: '600ms', animationDuration: '7s', opacity: 0.98}}></div>
+          </>
+        );
+      };
+
+      // 2. Steps Graphic
+      const StepsGraphic = ({ isCinematic }) => (
+        <svg width="60" height="40" viewBox="0 0 60 40" className={`mb-2 transition-colors duration-1000 ${isCinematic ? 'text-amber-500' : 'text-[#FF9933]'}`}>
+          <path d="M10 30 H20 V20 H30 V10 H40 V0" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+          <circle cx="10" cy="35" r="3" fill="currentColor" opacity="0.5" />
+          <circle cx="20" cy="25" r="3" fill="currentColor" opacity="0.7" />
+          <circle cx="30" cy="15" r="3" fill="currentColor" opacity="0.9" />
+          <circle cx="40" cy="5" r="4" fill="currentColor" />
+        </svg>
+      );
+
+      // 3. Counter Component (supports suffix & custom formatting)
+      const Counter = ({ end, duration = 2000, formatter, suffix = '' }) => {
+        const [displayValue, setDisplayValue] = useState(formatter ? formatter(0) : 0);
+
+        useEffect(() => {
+          let startTime = null;
+          let animationFrameId;
+
+          const animate = (timestamp) => {
+            if (!startTime) startTime = timestamp;
+            const progress = timestamp - startTime;
+            const percentage = Math.min(progress / duration, 1);
+            const ease = 1 - Math.pow(1 - percentage, 3); // Cubic ease out
+            
+            const currentVal = ease * end;
+            
+            // If formatter provided, use it. Otherwise default to integer formatting.
+            const formatted = formatter 
+                ? formatter(currentVal) 
+                : new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(currentVal);
+                
+            setDisplayValue(formatted);
+
+            if (progress < duration) {
+              animationFrameId = requestAnimationFrame(animate);
+            }
+          };
+          animationFrameId = requestAnimationFrame(animate);
+          return () => cancelAnimationFrame(animationFrameId);
+        }, [end, duration, formatter]);
+
+        return <span>{displayValue}{suffix}</span>;
+      };
+
+      // 4. Pyramid Visual
+      const PyramidVisual = ({ percentile }) => {
+        const [markerY, setMarkerY] = useState(100);
+        
+        useEffect(() => {
+          setMarkerY(100 - percentile);
+        }, [percentile]);
+
+        return (
+          <div className="relative w-full h-[350px] md:h-[450px] flex justify-center items-end py-4">
+             {/* Glow Effect */}
+             <div 
+                className="absolute inset-0 blur-[80px] rounded-full transform translate-y-20 pointer-events-none transition-all duration-1000"
+                style={{
+                  background: percentile > 90 
+                    ? 'rgba(124, 58, 237, 0.2)' 
+                    : 'rgba(251, 191, 36, 0.2)'
+                }}
+             />
+
+             <svg viewBox="0 0 200 120" className="w-full h-full max-w-lg drop-shadow-2xl" preserveAspectRatio="xMidYMax meet">
+                <defs>
+                  <linearGradient id="pyrGrad" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#8b5cf6" />
+                    <stop offset="50%" stopColor="#f59e0b" />
+                    <stop offset="100%" stopColor="#334155" />
+                  </linearGradient>
+                  <filter id="glow">
+                    <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+                    <feMerge>
+                      <feMergeNode in="coloredBlur"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                </defs>
+
+                <path d="M100 10 L180 110 H20 Z" fill="url(#pyrGrad)" opacity="0.2" />
+
+                {[30, 50, 70, 90, 110].map((y, i) => (
+                  <line key={i} x1={20 + ((y-10)*0.8)} y1={y} x2={180 - ((y-10)*0.8)} y2={y} stroke="#64748b" strokeOpacity="0.3" strokeWidth="0.5" />
+                ))}
+
+                <g className="transition-all duration-1000 ease-out">
+                  <line
+                    x1={20 + ((markerY + 10 - 10)*0.8)} 
+                    y1={markerY + 10}
+                    x2={180 - ((markerY + 10 - 10)*0.8)}
+                    y2={markerY + 10}
+                    stroke={percentile > 90 ? "#a78bfa" : "#fbbf24"}
+                    strokeWidth="1.5"
+                    filter="url(#glow)"
+                  />
+                  <text
+                    x={180 - ((markerY)*0.8) + 8}
+                    y={markerY + 11}
+                    fill={percentile > 90 ? "#a78bfa" : "#fbbf24"}
+                    fontSize="5"
+                    fontWeight="bold"
+                    className="opacity-100"
+                  >
+                    YOU
+                  </text>
+                  <circle 
+                    cx={100} 
+                    cy={markerY + 10} 
+                    r="2" 
+                    fill={percentile > 90 ? "#a78bfa" : "#fbbf24"}
+                    className="animate-pulse"
+                  />
+                </g>
+             </svg>
+          </div>
+        );
+      };
+
+      // 5. Main App Component
+      const App = () => {
+        const [amount, setAmount] = useState('');
+        const [period, setPeriod] = useState('MONTHLY');
+        
+        // Visual States
+        const [isCinematic, setIsCinematic] = useState(false);
+        const [showResults, setShowResults] = useState(false);
+        const [stats, setStats] = useState(null);
+
+        useEffect(() => {
+           if (showResults) {
+             setShowResults(false);
+           }
+        }, [amount, period]);
+
+        const handleCalculate = () => {
+          const val = typeof amount === 'string' ? parseFloat(amount.replace(/,/g, '')) : amount;
+          if (val === undefined || val === null || val < 0 || isNaN(val)) return;
+
+          const annual = period === 'MONTHLY' ? val * 12 : val;
+          setStats(calculateStats(annual));
+
+          if (!isCinematic) {
+             // First time triggering dark mode
+             setIsCinematic(true);
+             document.body.classList.add('cinematic-mode');
+             
+             // Wait for transition, then show results
+             setTimeout(() => {
+               setShowResults(true);
+             }, 800); 
+          } else {
+             setShowResults(false);
+             setTimeout(() => {
+               setShowResults(true);
+             }, 100);
+          }
+        };
+
+        const handleKeyDown = (e) => {
+          if (['e', 'E', '+', '-'].includes(e.key)) {
+            e.preventDefault();
+          }
+          if (e.key === 'Enter') {
+            handleCalculate();
+          }
+        };
+
+        return (
+          <div className="min-h-screen flex flex-col items-center pb-4 relative z-10">
+            <InkReveal trigger={isCinematic} />
+            
+            {/* Header */}
+            <header className="w-full pt-12 pb-6 flex flex-col items-center justify-center relative z-20 text-center">
+              <StepsGraphic isCinematic={isCinematic} />
+              <h1 className={`text-6xl font-darja tracking-wide transition-all duration-1000 ${isCinematic ? 'text-white glow-title' : 'text-emerald-950'}`}>
+                Darja
+              </h1>
+              <h2 className={`text-lg font-medium tracking-wide mt-2 transition-colors duration-1000 ${isCinematic ? 'text-slate-400' : 'text-slate-500'}`}>
+                Where do you stand?
+              </h2>
+            </header>
+
+            <main className="w-full max-w-3xl px-4 flex flex-col items-center relative z-10 mt-6 flex-grow">
+              
+              {/* Input Section */}
+              <div className={`w-full glass-panel p-1 rounded-3xl mb-8 transform transition-all duration-1000 ${isCinematic ? 'scale-95 opacity-90' : 'hover:scale-[1.01] shadow-lg'}`}>
+                <div className={`rounded-[22px] p-6 md:p-8 shadow-sm transition-all duration-1000 flex flex-col items-center ${isCinematic ? 'bg-[#111]' : 'bg-white'}`}>
+                  
+                  <h3 className={`text-center mb-4 text-sm font-medium tracking-wider uppercase transition-colors duration-1000 ${isCinematic ? 'text-slate-400' : 'text-slate-500'}`}>
+                    What is your income?
+                  </h3>
+
+                  {/* Toggle */}
+                  <div className="flex justify-center mb-8 w-full">
+                    <div className={`p-1 rounded-xl flex shadow-inner border transition-colors duration-1000 ${isCinematic ? 'bg-black border-slate-800' : 'bg-slate-50 border-slate-100'}`}>
+                      {['MONTHLY', 'YEARLY'].map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => setPeriod(p)}
+                          className={`px-6 py-2 rounded-lg text-xs md:text-sm font-bold tracking-wide transition-all duration-300 ${
+                            period === p 
+                              ? (isCinematic ? 'bg-slate-800 text-white shadow-lg' : 'bg-white text-indigo-600 shadow-lg scale-105')
+                              : (isCinematic ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600')
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Input with Rupee Symbol */}
+                  <div className="relative group w-full mb-6">
+                    <div className={`relative flex items-center rounded-2xl overflow-hidden border transition-all duration-1000 shadow-inner input-container ${isCinematic ? 'bg-[#1a1a1a] border-[#333] glow-input' : 'bg-slate-50 border-slate-200'}`}>
+                      <div className={`pl-6 pr-2 text-3xl md:text-4xl font-light select-none transition-colors duration-1000 ${isCinematic ? 'text-slate-500' : 'text-slate-400'}`}>
+                        ₹
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={period === 'MONTHLY' ? "15000" : "250000"}
+                        className={`input-text w-full bg-transparent text-3xl md:text-4xl font-bold py-6 pr-6 focus:outline-none placeholder:text-slate-200 transition-colors duration-1000 ${isCinematic ? 'text-white' : 'text-slate-800'}`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Calculate Button */}
+                  <button
+                    onClick={handleCalculate}
+                    disabled={amount === ''}
+                    className={`w-full md:w-auto px-10 py-4 rounded-2xl font-bold text-lg tracking-wide transition-all duration-500 transform shadow-lg flex items-center justify-center gap-2
+                      ${amount === ''
+                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
+                        : isCinematic
+                          ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                          : 'bg-slate-900 text-white hover:bg-slate-800 hover:scale-105 hover:shadow-2xl active:scale-95'
+                      }`}
+                  >
+                     {isCinematic ? 'Recalculate' : 'See Results'}
+                  </button>
+
+                </div>
+              </div>
+
+              {/* Results Section */}
+              {showResults && stats && (
+                <div className="w-full flex flex-col items-center animate-delayed-entry">
+                  
+                  {stats.isZero ? (
+                    /* Zero Income / Unemployed View */
+                    <div className="w-full max-w-2xl text-center">
+                        <h2 className="text-4xl md:text-5xl font-darja text-white mb-8 glow-title">Unemployed?</h2>
+                        <div className="glass-panel p-8 rounded-3xl border-l-4 border-l-rose-500 shadow-2xl bg-opacity-10 backdrop-blur-md mb-8">
+                            <p className="text-slate-300 text-lg leading-relaxed mb-6">
+                                Well, if you are 15-29 yr old, <span className="text-rose-400 font-bold">14.9%</span> of young population is unemployed in India.
+                                <br/>That is approx <span className="text-white font-bold text-2xl block mt-2">{formatIndianNumber(WORKFORCE_ESTIMATE * 0.149)} people</span>
+                            </p>
+                            <p className="text-slate-400 text-sm mb-4">
+                                And overall <span className="text-rose-400 font-bold">5.6%</span> of total workforce too.
+                            </p>
+                        </div>
+                        <p className="text-2xl text-slate-200 font-medium mb-2 glow-text">You are not alone.</p>
+                        <p className="text-xl text-emerald-400 font-darja tracking-wide">Believe in yourself.</p>
+                    </div>
+                  ) : (
+                    /* Standard Results View */
+                    <>
+                      {/* Percentile Big Stat */}
+                      <div className="text-center mb-4 relative pt-10">
+                        <p className="text-slate-500 uppercase tracking-[0.2em] text-xs font-bold relative z-10">You are in the top</p>
+                        <div className="text-7xl md:text-9xl font-black text-white relative z-10 my-2 tracking-tighter drop-shadow-2xl glow-text">
+                           <Counter end={100 - stats.percentile} suffix="%" formatter={formatPercent} />
+                        </div>
+                        <p className="text-indigo-400 font-medium relative z-10">of earning Indians</p>
+                      </div>
+
+                      {/* Pyramid Visual */}
+                      <div className="w-full -mt-10 mb-8 mix-blend-screen flex flex-col items-center">
+                        <PyramidVisual percentile={stats.percentile} />
+                        <div className="text-center text-slate-500 text-xs tracking-widest font-bold mt-2 opacity-50 uppercase">
+                          Indian Pyramid of Income
+                        </div>
+                      </div>
+
+                      {/* Wealthier Than Card */}
+                      <div className="w-full mb-8">
+                        <div className="glass-panel p-8 rounded-3xl border-l-4 border-l-emerald-500 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl bg-opacity-10 backdrop-blur-md">
+                          <div className="text-left w-full">
+                            <div className="text-slate-400 text-xs uppercase font-bold tracking-wider mb-2">In India</div>
+                            <div className="text-4xl md:text-5xl font-black text-white mb-2">
+                              <Counter end={stats.populationBelow} formatter={formatIndianNumber} />
+                            </div>
+                            <div className="text-emerald-400 font-medium text-sm flex items-center gap-2">
+                              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                              People earn <span className="text-red-500 font-bold text-base">LESS</span> than you
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Combined Comparison Block */}
+                      <div className="w-full mb-8">
+                        <div className="glass-panel p-8 rounded-3xl border-l-4 border-l-amber-500 flex flex-col items-center text-center shadow-2xl bg-opacity-10 backdrop-blur-md">
+                          <div className="text-8xl md:text-9xl mb-6 glow-globe">🌏</div>
+                          <div className="text-slate-300 text-lg font-light leading-relaxed">
+                             The number of people earning <span className="text-red-400 font-bold">LESS</span> than you is greater than the
+                             <br />
+                             <span className="text-slate-400 text-sm uppercase tracking-widest mt-2 block mb-1">Population count of</span>
+                             <span className="text-white font-semibold text-2xl mt-2 block glow-title">{stats.combinedString}</span>
+                             <span className="text-amber-400 font-bold text-sm tracking-widest uppercase mt-1 block">Combined</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Median Indian Comparison - Only if earning > 2x */}
+                      {stats.avgMultiplier > 2 && (
+                        <div className="w-full mb-8">
+                          <div className="glass-panel p-8 rounded-3xl border-l-4 border-l-indigo-500 flex flex-col items-center text-center shadow-2xl bg-opacity-10 backdrop-blur-md">
+                             <div className="text-slate-300 text-lg font-light leading-relaxed">
+                                You are earning the equivalent income of <br />
+                                <span className="text-indigo-400 font-bold text-3xl mt-2 block glow-indigo">
+                                  <Counter end={stats.avgMultiplier} formatter={(n) => n.toFixed(1)} /> <span className="text-white text-xl font-normal">median Indians</span>
+                                </span>
+                             </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Insights Section - Did You Know */}
+                      <div className="w-full mb-8">
+                         <div className="glass-panel p-8 rounded-3xl border-l-4 border-l-rose-500 shadow-2xl bg-opacity-10 backdrop-blur-md text-white">
+                            <h4 className="text-white text-sm font-bold uppercase tracking-widest mb-6">Did you know?</h4>
+                            
+                            <div className="flex flex-col gap-4">
+                               {/* Stat 1 */}
+                               <div className="p-5 rounded-2xl bg-white bg-opacity-10 flex flex-col md:flex-row items-center md:justify-between gap-2">
+                                  <div className="text-center md:text-left">
+                                      <div className="text-3xl font-black text-white">34%</div>
+                                      <div className="text-slate-300 text-xs">of India earns less than</div>
+                                  </div>
+                                  <div className="text-rose-300 font-bold text-xl md:text-2xl">₹100 / day</div>
+                               </div>
+
+                               {/* Unemployment Stats - Side by Side */}
+                               <div className="flex flex-row gap-4">
+                                  <div className="flex-1 p-5 rounded-2xl bg-white bg-opacity-10 text-center">
+                                      <div className="text-2xl md:text-3xl font-black text-white mb-1">14.9%</div>
+                                      <div className="text-slate-300 text-xs leading-tight">Youth <br/> Unemployment</div>
+                                  </div>
+                                  <div className="flex-1 p-5 rounded-2xl bg-white bg-opacity-10 text-center">
+                                      <div className="text-2xl md:text-3xl font-black text-white mb-1">5.6%</div>
+                                      <div className="text-slate-300 text-xs leading-tight">Total <br/> Unemployment</div>
+                                  </div>
+                               </div>
+                            </div>
+                         </div>
+                      </div>
+                    </>
+                  )}
+                  
+                </div>
+              )}
+
+            </main>
+
+            <footer className="mt-8 mb-4 text-center text-slate-400 text-xs relative z-10">
+               <p className="leading-6">
+                 Made with ❤️...... But mostly 🧠<br />
+                 <a href="https://www.PrithviSharma.com" className="text-slate-400 hover:underline hover:text-slate-300 transition-colors">www.PrithviSharma.com</a>
+               </p>
+            </footer>
+
+          </div>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
