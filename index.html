@@ -96,12 +96,20 @@
         position: fixed;
         background: #000;
         border-radius: 50%;
+        
+        /* Performance Optimization: Pre-set hidden state */
         transform: scale(0);
+        opacity: 0;
+        
+        /* GPU Acceleration Hints */
+        will-change: transform, opacity;
+        
         z-index: -1; /* Behind content */
         pointer-events: none;
       }
       
-      .animate-ink {
+      /* Only animate when this class is added */
+      .ink-blob.active {
         animation: inkSpread 5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
       }
 
@@ -110,13 +118,13 @@
         100% { transform: scale(1); opacity: 1; }
       }
     </style>
-  <link rel="stylesheet" href="/index.css">
+<link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>
 
     <script type="text/babel" data-presets="env,react">
-      const { useState, useEffect, useRef } = React;
+      const { useState, useEffect, useRef, memo } = React;
 
       // --- UTILS & CONSTANTS ---
       
@@ -290,9 +298,6 @@
         if (combinedNames.length > 3) {
             const firstThree = combinedNames.slice(0, 3);
             const othersCount = combinedNames.length - 3;
-            // If we had more names in our logic but cut them off, we add them to 'others'. 
-            // In a real scenario we might calculate 'others' more precisely by dividing remainingPop by avg state size, 
-            // but for this visual we use the names we found.
             displayString = firstThree.join(" + ") + ` + ${othersCount} other states`;
         } else {
             displayString = combinedNames.join(" + ");
@@ -309,43 +314,50 @@
 
       // --- COMPONENTS ---
 
-      // 1. Ink Reveal Component
-      const InkReveal = ({ trigger }) => {
-        if (!trigger) return null;
+      // 1. Ink Reveal Component (Optimized: Pre-rendered)
+      // We use memo to prevent unnecessary re-renders, though the DOM nodes are stable
+      const InkReveal = memo(({ trigger }) => {
+        // We always render the structure, but we only apply the 'active' class when triggered.
+        // This ensures the browser has already calculated the initial DOM positions and layers.
+        // 'will-change' in CSS handles the GPU readiness.
+        
+        const baseClass = "ink-blob";
+        const activeClass = trigger ? "active" : "";
+
         return (
           <>
             {/* 1. Fast, sharp center splashes - slowed down */}
-            <div className="ink-blob top-[50%] left-[50%] w-[150vmax] h-[150vmax] -ml-[75vmax] -mt-[75vmax] animate-ink" 
+            <div className={`${baseClass} ${activeClass} top-[50%] left-[50%] w-[150vmax] h-[150vmax] -ml-[75vmax] -mt-[75vmax]`} 
                  style={{animationDelay: '0ms', animationDuration: '5.5s'}}></div>
             
             {/* 2. Rapid small blobs for chaos - slowed down */}
-            <div className="ink-blob top-[20%] left-[30%] w-[80vmax] h-[80vmax] -ml-[40vmax] -mt-[40vmax] animate-ink" 
+            <div className={`${baseClass} ${activeClass} top-[20%] left-[30%] w-[80vmax] h-[80vmax] -ml-[40vmax] -mt-[40vmax]`} 
                  style={{animationDelay: '150ms', animationDuration: '4.8s'}}></div>
-            <div className="ink-blob bottom-[20%] right-[30%] w-[90vmax] h-[90vmax] -ml-[45vmax] -mt-[45vmax] animate-ink" 
+            <div className={`${baseClass} ${activeClass} bottom-[20%] right-[30%] w-[90vmax] h-[90vmax] -ml-[45vmax] -mt-[45vmax]`} 
                  style={{animationDelay: '200ms', animationDuration: '5s'}}></div>
-            <div className="ink-blob top-[80%] left-[10%] w-[70vmax] h-[70vmax] -ml-[35vmax] -mt-[35vmax] animate-ink" 
+            <div className={`${baseClass} ${activeClass} top-[80%] left-[10%] w-[70vmax] h-[70vmax] -ml-[35vmax] -mt-[35vmax]`} 
                  style={{animationDelay: '250ms', animationDuration: '4.5s'}}></div>
 
             {/* 3. Medium blobs covering edges - slowed down */}
-            <div className="ink-blob top-[0%] right-[0%] w-[120vmax] h-[120vmax] -ml-[60vmax] -mt-[60vmax] animate-ink" 
+            <div className={`${baseClass} ${activeClass} top-[0%] right-[0%] w-[120vmax] h-[120vmax] -ml-[60vmax] -mt-[60vmax]`} 
                  style={{animationDelay: '500ms', animationDuration: '5.2s'}}></div>
-            <div className="ink-blob bottom-[0%] left-[0%] w-[130vmax] h-[130vmax] -ml-[65vmax] -mt-[65vmax] animate-ink" 
+            <div className={`${baseClass} ${activeClass} bottom-[0%] left-[0%] w-[130vmax] h-[130vmax] -ml-[65vmax] -mt-[65vmax]`} 
                  style={{animationDelay: '600ms', animationDuration: '5.8s'}}></div>
             
             {/* 4. Large slow fillers - slowed down */}
-            <div className="ink-blob top-[40%] right-[80%] w-[110vmax] h-[110vmax] -ml-[55vmax] -mt-[55vmax] animate-ink" 
+            <div className={`${baseClass} ${activeClass} top-[40%] right-[80%] w-[110vmax] h-[110vmax] -ml-[55vmax] -mt-[55vmax]`} 
                  style={{animationDelay: '800ms', animationDuration: '6s'}}></div>
-            <div className="ink-blob top-[10%] left-[60%] w-[140vmax] h-[140vmax] -ml-[70vmax] -mt-[70vmax] animate-ink" 
+            <div className={`${baseClass} ${activeClass} top-[10%] left-[60%] w-[140vmax] h-[140vmax] -ml-[70vmax] -mt-[70vmax]`} 
                  style={{animationDelay: '900ms', animationDuration: '6.2s'}}></div>
 
             {/* 5. Massive engulfing waves - slowed down significantly */}
-            <div className="ink-blob top-[50%] left-[50%] w-[250vmax] h-[250vmax] -ml-[125vmax] -mt-[125vmax] animate-ink" 
-                 style={{animationDelay: '400ms', animationDuration: '6.5s', opacity: 0.98}}></div>
-            <div className="ink-blob top-[30%] left-[30%] w-[200vmax] h-[200vmax] -ml-[100vmax] -mt-[100vmax] animate-ink" 
-                 style={{animationDelay: '600ms', animationDuration: '7s', opacity: 0.98}}></div>
+            <div className={`${baseClass} ${activeClass} top-[50%] left-[50%] w-[250vmax] h-[250vmax] -ml-[125vmax] -mt-[125vmax]`} 
+                 style={{animationDelay: '400ms', animationDuration: '6.5s', opacity: trigger ? 0.98 : 0}}></div>
+            <div className={`${baseClass} ${activeClass} top-[30%] left-[30%] w-[200vmax] h-[200vmax] -ml-[100vmax] -mt-[100vmax]`} 
+                 style={{animationDelay: '600ms', animationDuration: '7s', opacity: trigger ? 0.98 : 0}}></div>
           </>
         );
-      };
+      });
 
       // 2. Steps Graphic
       const StepsGraphic = ({ isCinematic }) => (
@@ -518,6 +530,7 @@
 
         return (
           <div className="min-h-screen flex flex-col items-center pb-4 relative z-10">
+            {/* InkReveal is now always present, minimizing stutter on click */}
             <InkReveal trigger={isCinematic} />
             
             {/* Header */}
@@ -731,6 +744,5 @@
       const root = ReactDOM.createRoot(document.getElementById('root'));
       root.render(<App />);
     </script>
-  <script type="module" src="/index.tsx"></script>
 </body>
 </html>
