@@ -20,7 +20,7 @@ Darja is a simple Income Visualizer website that compares your income to the res
 
 ## Why make this website?
 
-Riddle me this..... you make ₹25,000/month and feel poor. Your neighbor menwhile makes ₹20,000/month and feels rich.... Why?
+<i>Riddle me this.....</i> you make ₹25,000/month and feel poor. Your neighbor menwhile makes ₹20,000/month and feels rich.... Why?
 
 Because **"Darja" is a mental construct**.
 
