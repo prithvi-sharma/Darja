@@ -43,7 +43,7 @@ The website doesn't tell you how un-successful you are. It doesn't need to. **Yo
 This is selective bias. <strong>This is why success feels empty.</strong>
 
 ## Quote of the Day
-<i>Instead of running after the shadows of Unattainable Ideals, perhaps pause to savor the beauty of each step you take in the Present.</i>
+<i>Instead of running after the shadows of <strong>Unattainable Ideals</strong>, perhaps pause to savor the beauty of each step you take in the <strong>Present</strong>.</i>
 ## 
 
 Let me know what you think : mail@prithvisharma.com
