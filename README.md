@@ -44,7 +44,6 @@ This is selective bias. <strong>This is why success feels empty.</strong>
 
 ## Quote of the Day
 Instead of running after the shadows of Unattainable Ideals, perhaps pause to savor the beauty of each step you take in the Present.
-
 ## 
 
 Let me know what you think : mail@prithvisharma.com
